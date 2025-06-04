@@ -20,9 +20,6 @@ jobs:
             goarch: arm64
             ext: ""
 
-    outputs:
-      tag: ${{ steps.extract_tag.outputs.tag }}
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -37,21 +34,14 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          mkdir -p build/${{ matrix.goos }}_${{ matrix.goarch }}
-          go build -o build/${{ matrix.goos }}_${{ matrix.goarch }}/tree-size${{ matrix.ext }} .
+          mkdir -p build
+          go build -o build/tree-size-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }} .
 
-      - name: Upload artifact
+      - name: Upload binary artifact
         uses: actions/upload-artifact@v4
-        if: github.ref == 'refs/heads/main'
         with:
           name: tree-size-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: build/${{ matrix.goos }}_${{ matrix.goarch }}
-
-      - name: Save build output for release
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          mkdir -p release
-          cp build/${{ matrix.goos }}_${{ matrix.goarch }}/tree-size${{ matrix.ext }} release/tree-size-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+          path: build/tree-size-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
@@ -59,13 +49,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: List downloaded files
+        run: ls -R artifacts
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -73,8 +63,8 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           files: |
-            artifacts/tree-size-windows-amd64/tree-size.exe
-            artifacts/tree-size-linux-amd64/tree-size
-            artifacts/tree-size-darwin-arm64/tree-size
+            artifacts/tree-size-windows-amd64/tree-size-windows-amd64.exe
+            artifacts/tree-size-linux-amd64/tree-size-linux-amd64
+            artifacts/tree-size-darwin-arm64/tree-size-darwin-arm64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
