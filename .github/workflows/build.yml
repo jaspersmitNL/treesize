@@ -1,0 +1,45 @@
+name: Build and Upload Artifacts
+
+on:
+  push: 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            ext: .exe
+          - goos: linux
+            goarch: amd64
+            ext: ""
+          - goos: darwin
+            goarch: arm64
+            ext: ""
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build for ${{ matrix.goos }}/${{ matrix.goarch }}
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p build/${{ matrix.goos }}_${{ matrix.goarch }}
+          go build -o build/${{ matrix.goos }}_${{ matrix.goarch }}/tree-size${{ matrix.ext }} .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          name: tree-size-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: build/${{ matrix.goos }}_${{ matrix.goarch }}
+      
